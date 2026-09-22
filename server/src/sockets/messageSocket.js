@@ -1,3 +1,4 @@
+const Message = require('../models/Message');
 const { saveMessage } = require('../services/messageService');
 const Media = require('../models/Media');
 
@@ -87,12 +88,62 @@ const registerMessageSocket = (io, socket) => {
         content: message.content,
         mediaId: verifiedMediaId ? verifiedMediaId.toString() : null,
         createdAt: message.createdAt.toISOString(),
+        seenBy: [],
       };
 
       io.to(`session:${socket.sessionId}`).emit('message:new', messagePayload);
     } catch (err) {
       console.error('[MessageSocket] message:send error:', err.message);
       socket.emit('error:server', { message: 'Failed to send message.' });
+    }
+  });
+
+  /**
+   * message:seen — client reports they have seen up to a given messageId.
+   * Server marks all messages up to that point as seen by this participant
+   * and broadcasts the update to everyone in the session.
+   */
+  socket.on('message:seen', async ({ messageId } = {}) => {
+    try {
+      if (!messageId) return;
+
+      // Find the target message to get its createdAt timestamp
+      const targetMessage = await Message.findOne({
+        _id: messageId,
+        sessionId: socket.sessionId,
+      }).lean();
+
+      if (!targetMessage) return;
+
+      // Mark all messages in this session up to (and including) the target as seen
+      // Only add if not already in seenBy for this participant
+      await Message.updateMany(
+        {
+          sessionId: socket.sessionId,
+          createdAt: { $lte: targetMessage.createdAt },
+          'seenBy.participantId': { $ne: socket.participantId },
+          senderParticipantId: { $ne: socket.participantId }, // Don't mark own messages
+        },
+        {
+          $push: {
+            seenBy: {
+              participantId: socket.participantId,
+              temporaryName: socket.participantName,
+              seenAt: new Date(),
+            },
+          },
+        }
+      );
+
+      // Broadcast seen event to the whole session so all clients update
+      io.to(`session:${socket.sessionId}`).emit('message:seen', {
+        upToMessageId: messageId,
+        participantId: socket.participantId,
+        temporaryName: socket.participantName,
+        seenAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('[MessageSocket] message:seen error:', err.message);
     }
   });
 };

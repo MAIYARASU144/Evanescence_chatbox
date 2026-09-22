@@ -141,7 +141,10 @@ const socketAuth = async (socket, next) => {
 
     const participant = session.participants.find((p) => p.participantId === participantId);
     if (!participant) {
-      return next(new Error('Participant not found in this session.'));
+      // Participant was removed (evicted after grace period or manually)
+      const err = new Error('EVICTED: You were removed from this chat.');
+      err.data = { code: 'EVICTED' };
+      return next(err);
     }
 
     const tokenHash = crypto

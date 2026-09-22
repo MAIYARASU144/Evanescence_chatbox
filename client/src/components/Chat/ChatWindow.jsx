@@ -57,8 +57,8 @@ const ChatWindow = ({ emit }) => {
           <span className="text-gray-300 font-medium">{onlineCount}/{session?.maxParticipants || '?'}</span>
         </button>
 
-        {/* Share */}
-        {isCreator && session?.shareUrl && (
+        {/* Share — available to everyone */}
+        {session?.shareUrl && (
           <button
             onClick={() => setShowShare(true)}
             id="share-link-btn"
@@ -87,7 +87,7 @@ const ChatWindow = ({ emit }) => {
       <div className="flex-1 flex overflow-hidden">
         {/* Messages */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <MessageList />
+          <MessageList emit={emit} />
           <MessageInput emit={emit} />
         </div>
 

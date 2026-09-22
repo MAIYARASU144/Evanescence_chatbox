@@ -18,6 +18,9 @@ const initialState = {
   // Media
   uploadProgress: {},   // { [uploadId]: 0-100 }
 
+  // Eviction
+  evicted: false,       // true when participant was removed after grace period
+
   // UI
   error: null,
 };
@@ -38,7 +41,27 @@ const reducer = (state, action) => {
       if (state.messages.some((m) => m.messageId === action.payload.messageId)) {
         return state;
       }
-      return { ...state, messages: [...state.messages, action.payload] };
+      return { ...state, messages: [...state.messages, { ...action.payload, seenBy: action.payload.seenBy || [] }] };
+
+    case 'MARK_MESSAGE_SEEN': {
+      // { upToMessageId, participantId, temporaryName, seenAt }
+      const { upToMessageId, participantId, temporaryName, seenAt } = action.payload;
+      // Find the timestamp of the upTo message
+      const upToMsg = state.messages.find((m) => (m.messageId || m._id) === upToMessageId);
+      if (!upToMsg) return state;
+      const upToTime = new Date(upToMsg.createdAt).getTime();
+
+      return {
+        ...state,
+        messages: state.messages.map((m) => {
+          const msgTime = new Date(m.createdAt).getTime();
+          if (msgTime > upToTime) return m;
+          // Already recorded for this participant?
+          if ((m.seenBy || []).some((s) => s.participantId === participantId)) return m;
+          return { ...m, seenBy: [...(m.seenBy || []), { participantId, temporaryName, seenAt }] };
+        }),
+      };
+    }
 
     case 'SET_PARTICIPANTS':
       return { ...state, participants: action.payload };
@@ -105,6 +128,9 @@ const reducer = (state, action) => {
     case 'CLEAR_ERROR':
       return { ...state, error: null };
 
+    case 'EVICTED':
+      return { ...initialState, evicted: true };
+
     case 'SESSION_ENDED':
       return {
         ...initialState,
@@ -127,6 +153,7 @@ export const ChatProvider = ({ children }) => {
   const setParticipant = useCallback((participant) => dispatch({ type: 'SET_PARTICIPANT', payload: participant }), []);
   const setMessages = useCallback((messages) => dispatch({ type: 'SET_MESSAGES', payload: messages }), []);
   const addMessage = useCallback((message) => dispatch({ type: 'ADD_MESSAGE', payload: message }), []);
+  const markMessageSeen = useCallback((data) => dispatch({ type: 'MARK_MESSAGE_SEEN', payload: data }), []);
   const setParticipants = useCallback((participants) => dispatch({ type: 'SET_PARTICIPANTS', payload: participants }), []);
   const updateParticipantStatus = useCallback((data) => dispatch({ type: 'UPDATE_PARTICIPANT_STATUS', payload: data }), []);
   const addParticipant = useCallback((participant) => dispatch({ type: 'ADD_PARTICIPANT', payload: participant }), []);
@@ -139,6 +166,7 @@ export const ChatProvider = ({ children }) => {
   const setError = useCallback((error) => dispatch({ type: 'SET_ERROR', payload: error }), []);
   const clearError = useCallback(() => dispatch({ type: 'CLEAR_ERROR' }), []);
   const sessionEnded = useCallback(() => dispatch({ type: 'SESSION_ENDED' }), []);
+  const setEvicted = useCallback(() => dispatch({ type: 'EVICTED' }), []);
   const reset = useCallback(() => dispatch({ type: 'RESET' }), []);
 
   return (
@@ -149,6 +177,7 @@ export const ChatProvider = ({ children }) => {
         setParticipant,
         setMessages,
         addMessage,
+        markMessageSeen,
         setParticipants,
         updateParticipantStatus,
         addParticipant,
@@ -161,6 +190,7 @@ export const ChatProvider = ({ children }) => {
         setError,
         clearError,
         sessionEnded,
+        setEvicted,
         reset,
       }}
     >

@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react';
-import useSocket from './useSocket';
 import { getUploadUrl as apiGetUploadUrl, confirmUpload as apiConfirmUpload } from '../services/api';
 import { useChat } from '../context/ChatContext';
 
@@ -8,9 +7,8 @@ const TYPING_DEBOUNCE_MS = 1500;
 /**
  * Chat operations hook — message sending, typing, media upload.
  */
-const useChat_Actions = ({ sessionToken, participantId, participantToken }) => {
+const useChat_Actions = ({ emit, sessionToken }) => {
   const { setUploadProgress, clearUploadProgress, addMessage } = useChat();
-  const { emit } = useSocket({ sessionToken, participantId, participantToken, enabled: true });
 
   // Typing debounce
   const typingTimerRef = useRef(null);

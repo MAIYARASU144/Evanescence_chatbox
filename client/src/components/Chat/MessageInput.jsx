@@ -17,9 +17,8 @@ const MessageInput = ({ emit }) => {
   const participantToken = participant?.participantToken;
 
   const { sendTextMessage, handleTyping, stopTyping, uploadMedia } = useChat_Actions({
+    emit,
     sessionToken,
-    participantId,
-    participantToken,
   });
 
   const [text, setText] = useState('');

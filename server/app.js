@@ -17,10 +17,11 @@ app.use(
   })
 );
 
-// CORS — only allow configured frontend origin
-const allowedOrigins = [
-  process.env.CLIENT_URL || 'http://localhost:5173',
-];
+// CORS — support comma-separated CLIENT_URL for multi-origin (e.g. Vercel + preview URLs)
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 app.use(
   cors({

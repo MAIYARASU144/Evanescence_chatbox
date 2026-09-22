@@ -55,6 +55,7 @@ const Create = () => {
       sessionStorage.setItem('participantToken', data.participantToken);
       sessionStorage.setItem('sessionToken', data.sessionToken);
       sessionStorage.setItem('temporaryName', form.temporaryName.trim());
+      sessionStorage.setItem('shareUrl', data.shareUrl || `${window.location.origin}/chat/${data.sessionToken}/join`);
 
       setSession({
         sessionId: data.sessionId,

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { getSocket, disconnectSocket } from '../services/socket';
 import { useChat } from '../context/ChatContext';
+import {
+  playMessageSound,
+  playJoinSound,
+  playLeaveSound,
+} from '../utils/sounds';
 
 /**
  * Manages the Socket.IO connection lifecycle and event handlers.
@@ -19,6 +24,8 @@ const useSocket = ({ sessionToken, participantId, participantToken, enabled = fa
     setTypingStop,
     sessionEnded,
     setSession,
+    markMessageSeen,
+    setEvicted,
   } = useChat();
 
   const cleanupSocket = useCallback(() => {
@@ -53,6 +60,12 @@ const useSocket = ({ sessionToken, participantId, participantToken, enabled = fa
 
     socket.on('connect_error', (err) => {
       console.error('[Socket] connect_error:', err.message);
+      // Detect eviction: participant was removed after grace period
+      if (err.message && err.message.startsWith('EVICTED')) {
+        cleanupSocket();
+        setEvicted();
+        return;
+      }
       setConnectionStatus('error');
     });
 
@@ -73,16 +86,19 @@ const useSocket = ({ sessionToken, participantId, participantToken, enabled = fa
       setMessages(
         data.messages.map((m) => ({
           messageId: m._id,
+          seenBy: m.seenBy || [],
           ...m,
         }))
       );
       setParticipants(data.participants);
-      setSession((prev) => ({
-        ...prev,
+      // Use sessionToken from hook params (stable) — not state.session (stale closure)
+      setSession({
+        sessionToken,
+        shareUrl: `${window.location.origin}/chat/${sessionToken}/join`,
         expiresAt: data.expiresAt,
         maxParticipants: data.maxParticipants,
         status: data.status,
-      }));
+      });
     });
 
     socket.on('session:destroyed', () => {
@@ -96,15 +112,31 @@ const useSocket = ({ sessionToken, participantId, participantToken, enabled = fa
     // ── Message events ──
     socket.on('message:new', (message) => {
       addMessage(message);
+      // Play sound for messages from others (not own messages)
+      if (message.senderParticipantId !== participantId) {
+        playMessageSound();
+      }
+    });
+
+    // ── Read receipts ──
+    socket.on('message:seen', (data) => {
+      markMessageSeen(data);
     });
 
     // ── Participant events ──
     socket.on('participant:joined', (participant) => {
       addParticipant(participant);
+      // Don't play sound for yourself rejoining
+      if (participant.participantId !== participantId) {
+        playJoinSound();
+      }
     });
 
     socket.on('participant:left', (data) => {
       removeParticipant(data);
+      if (data.participantId !== participantId) {
+        playLeaveSound();
+      }
     });
 
     // ── Presence events ──

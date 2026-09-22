@@ -63,12 +63,14 @@ const Join = () => {
       sessionStorage.setItem('participantToken', data.participantToken);
       sessionStorage.setItem('sessionToken', data.sessionToken);
       sessionStorage.setItem('temporaryName', form.temporaryName.trim());
+      sessionStorage.setItem('shareUrl', `${window.location.origin}/chat/${data.sessionToken}/join`);
 
       setSession({
         sessionId: data.sessionId,
         sessionToken: data.sessionToken,
         expiresAt: data.expiresAt,
         maxParticipants: sessionInfo?.maxParticipants,
+        shareUrl: `${window.location.origin}/chat/${data.sessionToken}/join`,
         status: 'active',
       });
 

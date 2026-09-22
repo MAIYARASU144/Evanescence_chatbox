@@ -29,6 +29,16 @@ const messageSchema = new mongoose.Schema({
 
   // Server-generated timestamp — never trust client timestamps
   createdAt: { type: Date, default: Date.now, index: true },
+
+  // Read receipts — list of participants who have seen this message
+  seenBy: [
+    {
+      participantId: { type: String, required: true },
+      temporaryName: { type: String, required: true },
+      seenAt: { type: Date, default: Date.now },
+      _id: false,
+    },
+  ],
 });
 
 // Index for fetching session messages in order

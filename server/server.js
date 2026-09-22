@@ -10,7 +10,10 @@ const { startBackgroundCleanup } = require('./src/services/cleanupService');
 const { setIo } = require('./src/controllers/sessionController');
 
 const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
 
 const startServer = async () => {
   // Connect to MongoDB first
@@ -22,7 +25,7 @@ const startServer = async () => {
   // Initialize Socket.IO
   const io = new Server(server, {
     cors: {
-      origin: CLIENT_URL,
+      origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
       methods: ['GET', 'POST'],
       credentials: true,
     },
