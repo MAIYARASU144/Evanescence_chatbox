@@ -1,25 +1,31 @@
 import React from 'react';
-import { Wifi, WifiOff, Loader2, AlertCircle } from 'lucide-react';
+import { WifiOff, Loader2, AlertCircle } from 'lucide-react';
 
 const STATUS_CONFIG = {
-  connected: null, // no banner when connected
+  connected:    null, // no banner
   reconnecting: {
-    icon: Loader2,
-    text: 'Reconnecting...',
-    className: 'bg-amber-900/40 border-amber-700/30 text-amber-300',
-    animate: true,
+    icon:      Loader2,
+    text:      'Reconnecting…',
+    bg:        'rgba(217,119,6,0.15)',
+    border:    'rgba(217,119,6,0.25)',
+    color:     '#fcd34d',
+    animate:   true,
   },
   error: {
-    icon: AlertCircle,
-    text: 'Connection failed. Please refresh.',
-    className: 'bg-red-900/40 border-red-700/30 text-red-300',
-    animate: false,
+    icon:      AlertCircle,
+    text:      'Connection failed. Please refresh.',
+    bg:        'rgba(239,68,68,0.12)',
+    border:    'rgba(239,68,68,0.25)',
+    color:     '#fca5a5',
+    animate:   false,
   },
   disconnected: {
-    icon: WifiOff,
-    text: 'Disconnected.',
-    className: 'bg-gray-800/60 border-gray-700/30 text-gray-400',
-    animate: false,
+    icon:      WifiOff,
+    text:      'Disconnected.',
+    bg:        'rgba(255,255,255,0.04)',
+    border:    'rgba(255,255,255,0.08)',
+    color:     '#6b7280',
+    animate:   false,
   },
 };
 
@@ -27,10 +33,19 @@ const ConnectionStatus = ({ status }) => {
   const config = STATUS_CONFIG[status];
   if (!config) return null;
 
-  const { icon: Icon, text, className, animate } = config;
+  const { icon: Icon, text, bg, border, color, animate } = config;
 
   return (
-    <div className={`flex items-center justify-center gap-2 px-4 py-1.5 text-xs border-b ${className} animate-fade-in`}>
+    <div
+      className="flex items-center justify-center gap-2 px-4 py-1.5 text-xs animate-slide-down z-20"
+      style={{
+        background:   bg,
+        borderBottom: `1px solid ${border}`,
+        color,
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
+    >
       <Icon className={`w-3.5 h-3.5 ${animate ? 'animate-spin' : ''}`} />
       <span>{text}</span>
     </div>

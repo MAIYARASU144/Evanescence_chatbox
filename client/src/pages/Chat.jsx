@@ -6,13 +6,24 @@ import ChatWindow from '../components/Chat/ChatWindow';
 import SessionExpired from '../components/Session/SessionExpired';
 import ConnectionStatus from '../components/UI/ConnectionStatus';
 
-// ── Eviction screen ──────────────────────────────────────────────────────────
+/* ── Spinner ── */
+const Spinner = () => (
+  <div className="z-page min-h-screen flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 rounded-full border-2 border-violet-500/25 border-t-violet-500
+                      animate-spin shadow-[0_0_16px_rgba(139,92,246,0.35)]" />
+      <p className="text-sm text-gray-600">Connecting…</p>
+    </div>
+  </div>
+);
+
+/* ── Eviction screen ── */
 const EvictedScreen = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center px-4">
-    <div className="card text-center max-w-sm w-full animate-slide-up">
-      <div className="text-5xl mb-4">👋</div>
+  <div className="z-page min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="card text-center max-w-sm w-full animate-scale-in">
+      <div className="text-6xl mb-4">👋</div>
       <h1 className="text-xl font-bold text-gray-200 mb-2">You Were Removed</h1>
-      <p className="text-gray-400 text-sm mb-2">
+      <p className="text-gray-400 text-sm mb-2 leading-relaxed">
         You were disconnected for more than 30 seconds and were automatically removed from this chat.
       </p>
       <p className="text-xs text-gray-600 mb-6">
@@ -22,7 +33,6 @@ const EvictedScreen = () => (
     </div>
   </div>
 );
-// ─────────────────────────────────────────────────────────────────────────────
 
 const Chat = () => {
   const { token } = useParams();
@@ -31,24 +41,24 @@ const Chat = () => {
 
   // Restore from sessionStorage if context was cleared (e.g. page refresh)
   useEffect(() => {
-    const storedToken = sessionStorage.getItem('sessionToken');
-    const storedParticipantId = sessionStorage.getItem('participantId');
-    const storedParticipantToken = sessionStorage.getItem('participantToken');
-    const storedName = sessionStorage.getItem('temporaryName');
-    const storedShareUrl = sessionStorage.getItem('shareUrl');
+    const storedToken          = sessionStorage.getItem('sessionToken');
+    const storedParticipantId  = sessionStorage.getItem('participantId');
+    const storedParticipantTok = sessionStorage.getItem('participantToken');
+    const storedName           = sessionStorage.getItem('temporaryName');
+    const storedShareUrl       = sessionStorage.getItem('shareUrl');
 
     if (!state.session && storedToken === token && storedParticipantId) {
       setSession({
-        sessionId: null,
+        sessionId:    null,
         sessionToken: storedToken,
-        status: 'active',
-        shareUrl: storedShareUrl || `${window.location.origin}/chat/${storedToken}/join`,
+        status:       'active',
+        shareUrl:     storedShareUrl || `${window.location.origin}/chat/${storedToken}/join`,
       });
       setParticipant({
-        participantId: storedParticipantId,
-        participantToken: storedParticipantToken,
-        temporaryName: storedName || 'Anonymous',
-        role: 'participant',
+        participantId:    storedParticipantId,
+        participantToken: storedParticipantTok,
+        temporaryName:    storedName || 'Anonymous',
+        role:             'participant',
       });
     } else if (!state.session && storedToken !== token) {
       navigate(`/chat/${token}/join`, { replace: true });
@@ -56,11 +66,10 @@ const Chat = () => {
   }, [token]); // eslint-disable-line
 
   const { participant, session } = state;
-  const sessionToken = session?.sessionToken || token;
-  const participantId = participant?.participantId;
+  const sessionToken     = session?.sessionToken || token;
+  const participantId    = participant?.participantId;
   const participantToken = participant?.participantToken;
 
-  // ── Always call hooks unconditionally (Rules of Hooks) ──
   const { emit } = useSocket({
     sessionToken,
     participantId,
@@ -68,29 +77,12 @@ const Chat = () => {
     enabled: !!(sessionToken && participantId && participantToken && !state.evicted),
   });
 
-  // ── Conditional screens — all AFTER hooks ──
-
-  // Eviction: participant was removed after 30-second grace period
-  if (state.evicted) {
-    return <EvictedScreen />;
-  }
-
-  // Session destroyed by creator or expired
-  if (state.session?.status === 'destroyed') {
-    return <SessionExpired />;
-  }
-
-  // Still loading credentials from sessionStorage
-  if (!participant || !session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full" />
-      </div>
-    );
-  }
+  if (state.evicted)                          return <EvictedScreen />;
+  if (state.session?.status === 'destroyed')  return <SessionExpired />;
+  if (!participant || !session)               return <Spinner />;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden z-page">
       <ConnectionStatus status={state.connectionStatus} />
       <ChatWindow emit={emit} />
     </div>
@@ -98,4 +90,3 @@ const Chat = () => {
 };
 
 export default Chat;
-
